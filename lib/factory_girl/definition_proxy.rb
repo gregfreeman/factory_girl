@@ -135,6 +135,10 @@ module FactoryGirl
       @factory.define_attribute(Attribute::Association.new(name, factory_name, options))
     end
 
+    def before_build(&block)
+      @factory.add_callback(:before_build, &block)
+    end
+
     def after_build(&block)
       @factory.add_callback(:after_build, &block)
     end

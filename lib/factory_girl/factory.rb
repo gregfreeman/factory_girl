@@ -65,19 +65,24 @@ module FactoryGirl
     end
 
     def add_callback(name, &block)
-      unless [:after_build, :after_create, :after_stub].include?(name.to_sym)
-        raise InvalidCallbackNameError, "#{name} is not a valid callback name. Valid callback names are :after_build, :after_create, and :after_stub"
+      unless [:after_build, :after_create, :after_stub, :before_build].include?(name.to_sym)
+        raise InvalidCallbackNameError, "#{name} is not a valid callback name. Valid callback names are :before_build, :after_build, :after_create, and :after_stub"
       end
       @attributes << Attribute::Callback.new(name.to_sym, block)
     end
 
     def run(proxy_class, overrides) #:nodoc:
       proxy = proxy_class.new(build_class)
+      before_callbacks = @attributes.collect {|k| k if k.kind_of?(FactoryGirl::Attribute::Callback) && k.name == :before_build }.compact
+      before_callbacks.each do |attribute|
+        attribute.add_to(proxy)
+      end
+      proxy.run_callbacks(:before_build) if before_callbacks.length >0
       overrides = symbolize_keys(overrides)
       overrides.each {|attr, val| proxy.set(attr, val) }
       passed_keys = overrides.keys.collect {|k| FactoryGirl.aliases_for(k) }.flatten
       @attributes.each do |attribute|
-        unless passed_keys.include?(attribute.name)
+        unless passed_keys.include?(attribute.name)  || before_callbacks.include?(attribute)
           attribute.add_to(proxy)
         end
       end
